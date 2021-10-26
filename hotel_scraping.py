@@ -8,15 +8,22 @@ import traceback
 import logging
 import sys
 
-nHotels         = 30
-nReviews        = 1000
-nReviewsPerPage = 5
-
-main_link = "https://www.tripadvisor.es"
+# Enlaces a los hoteles de las distintas ciudades de la cadena de hoteles
 ourense   = "/Hotels-g644337-Ourense_Province_of_Ourense_Galicia-Hotels.html"
+barcelona = "/Hotels-g187497-Barcelona_Catalonia-Hotels.html"
+vigo      = "/Hotels-g187509-Vigo_Province_of_Pontevedra_Galicia-Hotels.html"
+madrid    = "/Hotels-g187514-Madrid-Hotels.html"
 
+# Asignación de la zona de extracción de información, se puede cambiar por cualquiera de las opciones
+hotel_link = barcelona
+
+# Parámetros iniciales estáticos, define características básicas del script
+nHotels         = 30
+nReviewsPerPage = 5
+main_link       = "https://www.tripadvisor.es"
+
+# Cadenas estáticas que TripAdvisor usa y que se deben formatear
 opiniones_string = ' opiniones'
-
 enero_string      = 'enero de '
 febrero_string    = 'febrero de '
 marzo_string      = 'marzo de '
@@ -30,6 +37,7 @@ octubre_string    = 'octubre de '
 noviembre_string  = 'noviembre de '
 diciembre_string  = 'diciembre de '
 
+# Serie de agentes usados para realizar las diferentes peticiones a la web
 user_agent_list = [
 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:77.0) Gecko/20100101 Firefox/77.0',
 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.97 Safari/537.36',
@@ -37,16 +45,21 @@ user_agent_list = [
 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.97 Safari/537.36',
 ]
 
+# Listas que obtienen las filas de información de hoteles y reviews
 hotel_list  = []
 review_list = []
 
+# Nombres de las columnas de los datasets de hoteles y reviews
 hotel_list_columns  = ["id", "name", "review_count"]
 review_list_columns = ["hotel_id", "date", "review", "points"]
 
-city_hotels_link = main_link + ourense
+# Link final de scraping de hoteles y reviews
+city_hotels_link = main_link + hotel_link
 
+# Configuración básica de logging
 logging.basicConfig(filename='hotel_scraping.log', filemode='w', format='%(name)s - %(levelname)s - %(message)s')
 
+# Método de formateo de las clases CSS que usa TripAdvisor para representar las puntuaciones, a números
 def get_points_from_class(review_element):
     review_class = review_element['class']
     if 'bubble_00' in review_class:
@@ -74,6 +87,7 @@ def get_points_from_class(review_element):
     else:
         return None
 
+# Método de formateo de las fechas de la web para que tengan la forma MM-YYYY
 def format_date(date):
     if date is None:
         return None
@@ -106,13 +120,16 @@ def format_date(date):
         date = date.replace(diciembre_string, '12-')
     return date
 
+# Formateo del contador de reviews para poder transformarlo a entero
 def format_review_count(hotel_review_count):
     hotel_review_count = hotel_review_count.replace('.', '')
     return int(hotel_review_count.replace(opiniones_string, ''))
 
-def extract_hotels():
+# Método principal que extrae la información de los 30 hoteles más comunes en la zona y todas sus reviews
+def extract_hotels(hotels_html):
     try:
         hotel_id = 0
+        # Bucle que recorre los hoteles
         for hotel_html in hotels_html[:nHotels]:
             hotel_reference = hotel_html.find("a", {"class": "property_title"})
             hotel_name = hotel_reference.get_text()
@@ -128,14 +145,15 @@ def extract_hotels():
 
             request_headers = set_user_agent()
 
-            # print("Recogiendo {} de las {} totales.".format(nReviews, hotel_review_count))
+            # Bucle que recorre la paginación de opiniones de TripAdvisor
             for i in range(0, hotel_review_count, nReviewsPerPage):
                 response_reviews = requests.get(paginated_link.format(i), headers=request_headers)
                 sleep(randint(1, 5))
                 reviews_html = BeautifulSoup(response_reviews.content, "html.parser")
-                # if reviews_html:
+
                 print("Extraídas {} reviews de {}".format(i + nReviewsPerPage, hotel_review_count))
                 reviews_html = reviews_html.find_all("div", {"data-test-target": "HR_CC_CARD"})
+                #Bucle que, por página, recoge la información de las opiniones
                 for review in reviews_html:
                     review_reference = review.find("q")
                     review_text = review_reference.get_text()
@@ -146,13 +164,11 @@ def extract_hotels():
                         review_date_text = None
                     review_points_element = review.find("span", {"class": "ui_bubble_rating"})
                     review_points_text = get_points_from_class(review_points_element)
-                    # print(review_date_text)
-                    print(hotel_name)
-                    print(review_points_text)
-                    print(review_text + "\n")
+
                     review_list.append([hotel_id, review_date_text, review_text, review_points_text])
 
             hotel_id += 1
+    # En caso de producirse cualquier error se crea un log y se guarda el progreso actual
     except Exception:
         print("Se ha producido un problema en la extracción, se han generado los csv con lo extraído hasta el momento. "
               "Revise el archivo de log para más información")
@@ -161,11 +177,12 @@ def extract_hotels():
         generate_csv()
         sys.exit()
 
-
+# Método que elige de forma aleatoria un agente de la lista inicial
 def set_user_agent():
     user_agent = random.choice(user_agent_list)
     return {'User-Agent': user_agent}
 
+# Método que genera los CSV de hoteles y reviews a partir de las listas iniciales
 def generate_csv():
     current_time = str(time())
 
@@ -177,18 +194,24 @@ def generate_csv():
     df_reviews.to_csv(r'C:\Users\rachi\Desktop\review_dataframe_' + current_time + '.csv',
                       index=False, header=True, sep=';', encoding="utf-8")
 
+# Método de chequeo de reviews, si el hotel no tiene no se realiza la petición
 def check_reviews_number(hotel_review_count):
     if nReviews == 0:
         return hotel_review_count
     return nReviews
 
+# ----------------------------------------------------------------------------------------------------- #
 
+# Asignación inicial de user agent
 headers = set_user_agent()
 
+# Request y scraping del html de los hoteles
 response = requests.get(city_hotels_link, headers = headers)
 html = BeautifulSoup(response.content, "html.parser")
 hotels_html = html.find_all("div", {"class": "listItem"})
 
-extract_hotels()
+# Extracción de la información de hoteles y reviews
+extract_hotels(hotels_html)
 
+# Generación de los datasets finales
 generate_csv()
