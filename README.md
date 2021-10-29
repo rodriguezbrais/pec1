@@ -14,3 +14,4 @@
     * generate_csv(): a partir de la información de las listas de hoteles y reviews, genera los datasets finales.
     * check_reviews_number(hotel_review_count): comprueba si el hotel tiene reviews, si no tiene ya no realiza la petición de su URL.
 ### DOI de Zenodo
+https://zenodo.org/record/5614241
