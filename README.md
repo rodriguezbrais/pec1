@@ -5,7 +5,7 @@
 Para poder ejecutar el código sin problemas se deben instalar los requerimientos del mismo. Para ello, se deben seguir los siguientes pasos:
 * Abrir el proyecto con un entorno nuevo o ya existente.
 * En la consola del entorno, ejecutar el comando **pip install pipreqs**. Esto instala el paquete pipreqs que se usa en el siguiente paso para instalar los requerimientos del script.
-* En la misma consola, ejecutar el comando **pip install ./requirements.txt**, que instala todos los paquetes necesarios. La ruta del archivo es relativa, suponiendo que se ha abierto el proyecto y se está ejecutando los comandos desde la consola del entorno del mismo. Si este comando se ejecuta desde otra localización, se debe sustituir el "./" de la ruta por la ruta completa o relativa correspondiente.
+* En la misma consola, ejecutar el comando **pip install -r ./requirements.txt**, que instala todos los paquetes necesarios. La ruta del archivo es relativa, suponiendo que se ha abierto el proyecto y se está ejecutando los comandos desde la consola del entorno del mismo. Si este comando se ejecuta desde otra localización, se debe sustituir el "./" de la ruta por la ruta completa o relativa correspondiente.
 ### Ficheros asociados al proyecto
 * hotel_scraping.py: el archivo principal donde se concentra todo el código desarrollado. Este script consta de varias partes y métodos:
   * **Imports:** primera sección del script donde se especifican todas las dependencias del script.
